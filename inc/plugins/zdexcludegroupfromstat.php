@@ -15,22 +15,18 @@ if(!defined("PLUGINLIBRARY"))
     define("PLUGINLIBRARY", MYBB_ROOT."inc/plugins/pluginlibrary.php");
 }
 
-$plugins->add_hook("stats_rebuild_numuser", "processNumUser");
-// $plugins->add_hook("stats_rebuild_processed", "processStat");
-
 // basic info for plugin manager
 function zdexcludegroupfromstat_info()
 {
 	global $lang;
-	$lang->load("zdexcludegroupfromstat", true);
-
+	
 	return array(
-		"name"				=> $lang->plugin_name,
-		"description"		=> $lang->plugin_description,
+		"name"				=> "ZD Exclude Usergroup from user count",
+		"description"		=> "Excludes user from specific usergroup from user count in board statistics.",
 		"website"			=> "http://www.znapdev.de",
 		"author"			=> "ZnapShot",
 		"authorsite"		=> "http://www.znapdev.de",
-		"version"			=> "1.0",
+		"version"			=> "0.0.1",
 		"codename"			=> "zdexcludegroupfromstat",
 		"compatibility"		=> "18*"
 	);
@@ -39,24 +35,32 @@ function zdexcludegroupfromstat_info()
 function zdexcludegroupfromstat_activate()
 {
   if(!file_exists(PLUGINLIBRARY)) return;
-	global $db, $cache;
 	global $PL;
+	
 	$PL or require_once PLUGINLIBRARY;
 	
 	$debug = array();
-	
-	$edits = array(
-		'search' => '$query = $db->simple_select("users", "COUNT(uid) AS users");',
-		'replace' => '$query = $db->simple_select("users u", "COUNT(u.uid) AS users","u.usergroup IN (SELECT g.gid FROM mybb_usergroups g WHERE g.showmemberlist=1 AND u.usergroup=g.gid)");',
-	);
+/*
+		$query = $db->simple_select("users", "uid, username", "", array('order_by' => 'regdate', 'order_dir' => 'DESC', 'limit' => 1));
+		*/
+	$search  =  '$query = $db->simple_select("users", "uid, username", "", array(\'order_by\' => \'regdate\', \'order_dir\' => \'DESC\', \'limit\' => 1));';
+	$replace =  '$query = $db->simple_select("users u", "u.uid, u.username, COUNT(u.uid) as numuser", "u.usergroup IN (SELECT g.gid FROM mybb_usergroups g WHERE g.showmemberlist=1 AND u.usergroup=g.gid)", array("order_by" => "u.regdate", "order_dir" => "DESC", "limit" => 1));';
 
-  $result = $PL->edit_core('zdexcludegroupfromstat', './inc/functions_rebuild.php', $edits, true);
+	$search2 =	'$new_stats[\'lastuid\'] = $lastmember[\'uid\'];';
+	$before2 = '$new_stats[\'numuser\'] = $lastmember[\'numuser\'];';
 
   $edits = array(
-		'search' => '$query = $db->simple_select("users", "uid, username", "", array(\'order_by\' => \'regdate\', \'order_dir\' => \'DESC\', \'limit\' => 1));',
-		'replace' => '$query = $db->simple_select("users u", "u.uid, u.username", "u.usergroup IN (SELECT g.gid FROM mybb_usergroups g WHERE g.showmemberlist=1 AND u.usergroup=g.gid)", array(\'order_by\' => \'regdate\', \'order_dir\' => \'DESC\', \'limit\' => 1));',
+		array(
+		'search' => $search,
+		'replace' => $replace
+		),
+		array(
+			'search' => $search2,
+			'before' => $before2
+		)
 	);
-  $result = $PL->edit_core('zdexcludegroupfromstat', './inc/functions.php', $edits, true);
+  
+  $result = $PL->edit_core('zdexcludegroupfromstat1', './inc/functions.php', $edits, true);
 }
 
 function zdexcludegroupfromstat_deactivate(){
@@ -64,9 +68,18 @@ function zdexcludegroupfromstat_deactivate(){
 
   global $PL;
   $PL or require_once PLUGINLIBRARY;
-
-  $result = $PL->edit_core('zdexcludegroupfromstat', 'search.php');
-
+	$search  =  '$query = $db->simple_select("users", "uid, username", "", array(\'order_by\' => \'regdate\', \'order_dir\' => \'DESC\', \'limit\' => 1));';
+	$search2 =	'$new_stats[\'lastuid\'] = $lastmember[\'uid\'];';
+	
+  $edits = array(
+		array(
+		'search' => $search,
+		),
+		array(
+			'search' => $search2,
+		)
+	);
+	$result = $PL->edit_core('zdexcludegroupfromstat1', './inc/functions.php', $edits, true);
 }
 
 function processNumUser(){
