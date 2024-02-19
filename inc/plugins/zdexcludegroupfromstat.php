@@ -43,20 +43,27 @@ function zdexcludegroupfromstat_activate()
 /*
 		$query = $db->simple_select("users", "uid, username", "", array('order_by' => 'regdate', 'order_dir' => 'DESC', 'limit' => 1));
 		*/
-	$search  =  '$query = $db->simple_select("users", "uid, username", "", array(\'order_by\' => \'regdate\', \'order_dir\' => \'DESC\', \'limit\' => 1));';
-	$replace =  '$query = $db->simple_select("users u", "u.uid, u.username, COUNT(u.uid) as numuser", "u.usergroup IN (SELECT g.gid FROM mybb_usergroups g WHERE g.showmemberlist=1 AND u.usergroup=g.gid)", array("order_by" => "u.regdate", "order_dir" => "DESC", "limit" => 1));';
+	$search1 =  'if(array_key_exists(\'numusers\', $changes))';
+	$replace1 = 'if(true || array_key_exists(\'numusers\', $changes))';
 
-	$search2 =	'$new_stats[\'lastuid\'] = $lastmember[\'uid\'];';
-	$before2 = '$new_stats[\'numuser\'] = $lastmember[\'numuser\'];';
+	$search2  =  '$query = $db->simple_select("users", "uid, username", "", array(\'order_by\' => \'regdate\', \'order_dir\' => \'DESC\', \'limit\' => 1));';
+	$replace2 =  '$query = $db->simple_select("users u", "u.uid, u.username, COUNT(u.uid) as numusers", "u.usergroup IN (SELECT g.gid FROM mybb_usergroups g WHERE g.showmemberlist=1 AND u.usergroup=g.gid)", array("order_by" => "u.regdate", "order_dir" => "DESC", "limit" => 1));';
+
+	$search3 =	'$new_stats[\'lastuid\'] = $lastmember[\'uid\'];';
+	$before3 = '$new_stats[\'numusers\'] = $lastmember[\'numusers\'];';
 
   $edits = array(
 		array(
-		'search' => $search,
-		'replace' => $replace
+		'search' => $search1,
+		'replace' => $replace1
 		),
 		array(
 			'search' => $search2,
-			'before' => $before2
+			'replace' => $replace2
+		),
+		array(
+			'search' => $search3,
+			'before' => $before3
 		)
 	);
   
@@ -68,15 +75,19 @@ function zdexcludegroupfromstat_deactivate(){
 
   global $PL;
   $PL or require_once PLUGINLIBRARY;
-	$search  =  '$query = $db->simple_select("users", "uid, username", "", array(\'order_by\' => \'regdate\', \'order_dir\' => \'DESC\', \'limit\' => 1));';
-	$search2 =	'$new_stats[\'lastuid\'] = $lastmember[\'uid\'];';
-	
+	$search  = 'if(array_key_exists(\'numusers\', $changes))';
+	$search2 = '$query = $db->simple_select("users", "uid, username", "", array(\'order_by\' => \'regdate\', \'order_dir\' => \'DESC\', \'limit\' => 1));';
+	$search3 = '$new_stats[\'lastuid\'] = $lastmember[\'uid\'];';
+
   $edits = array(
 		array(
-		'search' => $search,
+			'search' => $search,
 		),
 		array(
 			'search' => $search2,
+		),
+		array(
+			'search' => $search3
 		)
 	);
 	$result = $PL->edit_core('zdexcludegroupfromstat1', './inc/functions.php', $edits, true);
